@@ -1,0 +1,78 @@
+Link to dataset : https://www.kaggle.com/datasets/thedevastator/airbnb-prices-in-european-cities
+Price of Airbnbs for various cities in Europe 
+
+1. As it had different table for each city, weekend/weekday, I created a single table combining all tables so that we don't have to join tables for each query :
+
+CREATE TABLE Airbnb.airbnb_prices AS
+SELECT *,  'amsterdam' as City, False as Weekend FROM `Airbnb.amsterdam_weekdays`	UNION ALL	SELECT *,  'amsterdam' as City, True as Weekend FROM Airbnb.amsterdam_weekends	
+UNION ALL
+SELECT *,  'athens' as City, False as Weekend FROM Airbnb.athens_weekdays	UNION ALL	SELECT *,  'athens' as City, True as Weekend FROM Airbnb.athens_weekends	
+UNION ALL
+SELECT *,  'barcelona' as City, False as Weekend FROM Airbnb.barcelona_weekdays	UNION ALL	SELECT *,  'barcelona' as City, True as Weekend FROM Airbnb.barcelona_weekends	
+UNION ALL
+SELECT *,  'berlin' as City, False as Weekend FROM Airbnb.berlin_weekdays	UNION ALL	SELECT *,  'berlin' as City, True as Weekend FROM Airbnb.berlin_weekends	
+UNION ALL
+SELECT *,  'budapest' as City, False as Weekend FROM Airbnb.budapest_weekdays	UNION ALL	SELECT *,  'budapest' as City, True as Weekend FROM Airbnb.budapest_weekends	
+UNION ALL
+SELECT *,  'lisbon' as City, False as Weekend FROM Airbnb.lisbon_weekdays	UNION ALL	SELECT *,  'lisbon' as City, True as Weekend FROM Airbnb.lisbon_weekends	
+UNION ALL
+SELECT *,  'london' as City, False as Weekend FROM Airbnb.london_weekdays	UNION ALL	SELECT *,  'london' as City, True as Weekend FROM Airbnb.london_weekends	
+UNION ALL
+SELECT *,  'paris' as City, False as Weekend FROM Airbnb.paris_weekdays	UNION ALL	SELECT *,  'paris' as City, True as Weekend FROM Airbnb.paris_weekends	
+UNION ALL
+SELECT *,  'rome' as City, False as Weekend FROM Airbnb.rome_weekdays	UNION ALL	SELECT *,  'rome' as City, True as Weekend FROM Airbnb.rome_weekends	
+UNION ALL
+SELECT *,  'vienna' as City, False as Weekend FROM Airbnb.vienna_weekdays	UNION ALL	SELECT *,  'vienna' as City, True as Weekend FROM Airbnb.vienna_weekends
+
+2. Average Prices in various European cities?
+
+SELECT City, AVG(realSum) as AveragePrice
+FROM `Airbnb.airbnb_prices`
+GROUP BY City
+ORDER BY AveragePrice DESC
+
+
+3. What is the average price difference between weekdays and weekends for Airbnb listings in Europe?
+
+SELECT b.wknd_avg - a.wkday_avg
+FROM
+(SELECT AVG(realSum) as wkday_avg
+FROM `Airbnb.airbnb_prices`
+WHERE Weekend = False) a,
+(SELECT AVG(realSum) as wknd_avg
+FROM `Airbnb.airbnb_prices`
+WHERE Weekend = True) b
+
+4. Correlation between the Cleanliness and overall rating
+
+SELECT corr(cleanliness_rating, guest_satisfaction_overall) as Correlation_between_ratings
+FROM `Airbnb.airbnb_prices`
+
+5. Correlation between prices and Overall ratings
+
+SELECT corr(realSum, metro_dist) as Corr_bw_price_and_rating
+FROM `Airbnb.airbnb_prices`
+
+6. Price difference to pay for additional person
+
+WITH Avg_Prices_Per_Capacity AS
+(SELECT person_capacity, AVG(realSum) as avg_price,
+row_number() OVER(ORDER BY person_capacity) as rnk
+FROM Airbnb.airbnb_prices
+GROUP BY person_capacity)
+
+
+SELECT a.person_capacity, 
+a.avg_price - b.avg_price as price_for_additional_person
+FROM Avg_Prices_Per_Capacity a
+INNER JOIN Avg_Prices_Per_Capacity b
+ON a.rnk = b.rnk + 1
+
+7. Giving recommendations based on Host being Superhost and ratings of Airbnb:
+
+SELECT *,
+CASE 
+WHEN host_is_superhost = True AND guest_satisfaction_overall > 95 THEN 'Highly Recommended'
+WHEN guest_satisfaction_overall > 85 THEN 'Recommended'
+ELSE '-' END AS Recommendation
+FROM `Airbnb.airbnb_prices`
